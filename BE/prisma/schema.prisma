@@ -1,0 +1,70 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Parent {
+  id        String    @id @default(uuid())
+  name      String
+  email     String    @unique
+  students  Student[]
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+}
+
+model Student {
+  id        String    @id @default(uuid())
+  name      String
+  age       Int
+  parentId  String
+  parent    Parent    @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+}
+
+model TrialClass {
+  id          String    @id @default(uuid())
+  title       String
+  subject     String
+  schedule    String
+  price       Float     @default(25.0)
+  maxCapacity Int       @default(4)
+  description String
+  bookings    Booking[]
+  createdAt   DateTime  @default(now())
+}
+
+model Booking {
+  id              String           @id @default(uuid())
+  trialClassId    String
+  studentId       String
+  parentId        String
+  status          String           // 'CONFIRMED' | 'PAYMENT_FAILED' | 'REJECTED_OVERBOOKED'
+  amount          Float
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  trialClass      TrialClass       @relation(fields: [trialClassId], references: [id], onDelete: Cascade)
+  student         Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  parent          Parent           @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  paymentAttempts PaymentAttempt[]
+
+  @@index([trialClassId, status])
+  @@index([studentId, trialClassId])
+}
+
+model PaymentAttempt {
+  id            String   @id @default(uuid())
+  bookingId     String
+  transactionId String   @unique
+  amount        Float
+  status        String   // 'SUCCESS' | 'FAILED' | 'REFUNDED'
+  paymentMethod String   @default("MOCK_CARD")
+  createdAt     DateTime @default(now())
+
+  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
